@@ -5,6 +5,9 @@ import { fastifySwaggerUi } from '@fastify/swagger-ui';
 import jwt from 'jsonwebtoken';
 import { healthRoutes } from './routes/health';
 import { authRoutes } from './routes/auth';
+import { financeRoutes } from './routes/finance';
+import { goalRoutes } from './routes/goal';
+import { inventoryRoutes } from './routes/inventory';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -87,6 +90,9 @@ export async function buildApp() {
 
   await app.register(healthRoutes);
   await app.register(authRoutes);
+  await app.register(financeRoutes);
+  await app.register(goalRoutes);
+  await app.register(inventoryRoutes);
 
   // Ruta raíz de información
   app.get('/', async () => {
@@ -95,7 +101,29 @@ export async function buildApp() {
       version: '0.1.0',
       docs: '/docs',
       health: '/health',
-      auth: ['/auth/register', '/auth/login', '/auth/session', '/auth/logout'],
+      auth: [
+        '/auth/register',
+        '/auth/login',
+        '/auth/session',
+        '/auth/logout',
+      ],
+      finance: [
+        'GET /finance/movements',
+        'POST /finance/movements',
+      ],
+      goal: [
+        'GET /goal',
+        'POST /goal',
+        'PUT /goal/:id',
+        'GET /goal/entries',
+        'POST /goal/entries',
+      ],
+      inventory: [
+        'GET /inventory/products',
+        'POST /inventory/products',
+        'GET /inventory/stock-movements',
+        'POST /inventory/stock-movements',
+      ],
     };
   });
 

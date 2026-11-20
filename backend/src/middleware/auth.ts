@@ -63,3 +63,22 @@ export function requireAuth(
 
   return request.user;
 }
+
+/**
+ * Hook de preHandler para Fastify: requiere autenticación.
+ * Si no hay sesión válida, lanza un error que Fastify convierte en 401.
+ */
+export function requireAuthHook(
+  request: { user: AuthenticatedUser | null },
+  _reply: { status: (code: number) => { send: (body: unknown) => unknown } },
+  done: (error?: Error) => void
+): void {
+  if (!request.user || !request.user.authenticated) {
+    const error = new Error('Autenticación requerida.');
+    (error as unknown as Record<string, unknown>).statusCode = 401;
+    done(error);
+    return;
+  }
+
+  done();
+}
