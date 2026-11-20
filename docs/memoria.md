@@ -127,13 +127,33 @@ Registradas en `docs/decisions.md`:
 - Los IDs son UUIDv4 (TAD-03 pendiente).
 - La validación de saldo por cuenta y la idempotencia del servidor siguen pendientes.
 
-## Pendiente
+## Backend (nuevo)
+
+- `backend/` con Fastify, Zod, PostgreSQL (`pg`), CORS, cookies firmadas y Swagger.
+- Endpoints operativos: `GET /` y `GET /health`.
+- Middleware de autenticación con cookies (`authMiddleware`) y decorador `request.user`.
+- Cliente de base de datos (`db/client.ts`) compatible con `DB_URL` o `DB_USER`/`DB_PASSWORD`.
+- Puerto configurable vía `PORT` (default 3333).
+- Scripts: `npm run backend:dev`, `npm run backend:start`, `npm run backend:typecheck`.
+
+### Decisiones técnicas confirmadas (este incremento)
+
+| ID | Decisión | Respuesta |
+|---|---|---|
+| TAD-01 | Motor de sincronización | PowerSync |
+| TAD-03 | Identificadores | UUIDv4 |
+| TAD-04 | Framework del backend | Fastify |
+| TAD-06 | Cifrado y protección local | Cifrador local aprobado |
+| TAD-07 | Autenticación y sesiones | Autenticación de sesiones aprobada |
+
+### Pendiente
 
 ### Funcionalidad
 
-- API de sincronización que consuma el outbox y aplique idempotencia.
-- Autenticación, sesiones y cifrado local (TAD-06, TAD-07).
+- Integrar PowerSync para sincronizar el `outbox` local con PostgreSQL (TAD-01).
+- Implementar validación real de credenciales y cifrado local (TAD-06, TAD-07).
 - Validación de saldos por cuenta y reglas de capital guardado aprobadas.
+- Rutas de API para finanzas, objetivo e inventario.
 - Compras y ventas con sus artículos, inventario y finanzas en una transacción.
 - Lógica real de experimentos, proyectos y tareas.
 - Exportaciones, informes y respaldos.
@@ -141,7 +161,7 @@ Registradas en `docs/decisions.md`:
 ### Decisiones todavía abiertas
 
 - PRD-01, PRD-04 a PRD-12.
-- TAD-01 a TAD-11.
+- TAD-02, TAD-05, TAD-08, TAD-09, TAD-10, TAD-11.
 - DLS-004 a DLS-009.
 
 No convertir propuestas en decisiones aprobadas sin confirmación del responsable.
@@ -185,11 +205,12 @@ No convertir propuestas en decisiones aprobadas sin confirmación del responsabl
 
 - `docs/firts-promt.md` — instrucciones maestras.
 - `docs/prd.md` — producto.
-- `docs/tad.md` — arquitectura, incluido §6.8 del objetivo.
+- `docs/tad.md` — arquitectura técnica, incluido §6.8 del objetivo.
 - `docs/dls.md` — sistema de diseño, incluido §9.7.
 - `docs/decisions.md` — decisiones confirmadas y pendientes.
 - `db/migrations/` — esquema PostgreSQL.
 - `db/migrate.mjs` — runner de migraciones.
+- `backend/` — API Fastify (package.json, tsconfig.json, src/).
 - `src/services/local/store.ts` — estado local, validaciones y outbox.
 - `src/modules/finance/` — modelo, formulario y pantalla de finanzas.
 - `src/modules/goal/` — modelo, formularios y pantalla del objetivo.

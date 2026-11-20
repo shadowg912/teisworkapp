@@ -33,34 +33,39 @@ Estas decisiones se registraron a partir de las respuestas del responsable al cu
 | DLS-008 | Biblioteca de iconos | Pendiente | Ionicons, incluido con Ionic |
 | DLS-009 | Densidad de tablas y listados | Pendiente | Celdas con 16 px de espaciado |
 
+## Decisiones técnicas confirmadas
+
+| ID | Decisión | Respuesta | Fecha | Documentos afectados |
+|---|---|---|---|---|
+| TAD-01 | Motor de sincronización | PowerSync | 2026-11-20 | TAD §3.5 |
+| TAD-03 | Identificadores | UUIDv4 | 2026-11-20 | TAD §6.1 |
+| TAD-04 | Framework del backend | Fastify | 2026-11-20 | TAD §3.2, §5 |
+| TAD-06 | Cifrado y protección local | Cifrador local aprobado | 2026-11-20 | TAD §3.4 |
+| TAD-07 | Autenticación y sesiones | Autenticación de sesiones aprobada | 2026-11-20 | TAD §3.2, §5.1 |
+
 ## Decisiones técnicas pendientes
 
 | ID | Decisión | Estado | Notas |
 |---|---|---|---|
-| TAD-01 | Motor de sincronización | Pendiente | PowerSync es candidato, sin confirmar. Hoy solo existe outbox local |
 | TAD-02 | SQLite en web | Pendiente | Requiere validar opción WASM. Hoy se usa `localStorage` provisional |
-| TAD-03 | Identificadores | Pendiente | Elegir UUIDv4 o UUIDv7. Hoy se usa UUIDv4 |
-| TAD-04 | Framework del backend | Pendiente | Fastify es candidato. Todavía no hay API; las migraciones usan `pg` |
 | TAD-05 | ORM | Pendiente | Drizzle es candidato. Hoy las migraciones son SQL directo |
-| TAD-06 | Cifrado y protección local | Pendiente | Bloquea datos sensibles en producción |
-| TAD-07 | Autenticación y sesiones | Pendiente | Bloquea login real |
 | TAD-08 | Almacenamiento de archivos | Pendiente | |
 | TAD-09 | Reglas de conflicto offline | Pendiente | Bloquea ventas offline |
 | TAD-10 | Agente de IA | Pendiente | Proveedor e integración |
 | TAD-11 | Respaldos y restauración | Pendiente | Frecuencia y retención |
 
-### Implementación provisional actual
+### Implementación actual y decisiones pendientes
 
-Estas piezas están implementadas, pero **no convierten las decisiones pendientes en aprobadas**:
-
-| Tema | Implementación actual | Decisión pendiente |
-|---|---|---|
-| Persistencia local | `localStorage` + outbox en `src/services/local/` | TAD-02 |
-| Sincronización | Cola local; no hay envío al servidor | TAD-01 |
-| Backend/API | No existe todavía; migraciones SQL ejecutadas con `pg` | TAD-04 |
-| ORM | SQL directo en `db/migrations/` | TAD-05 |
-| Identificadores | UUIDv4 con `crypto.randomUUID()` y `gen_random_uuid()` | TAD-03 |
-| Validación de saldos | Solo se impide retirar más capital guardado del disponible; el saldo por cuenta no se valida | PRD-04 / reglas de saldos |
+| Tema | Implementación actual | Estado | Decisión pendiente |
+|---|---|---|---|
+| Persistencia local | `localStorage` + outbox en `src/services/local/` | Vigente | TAD-02 |
+| Sincronización | Cola local; PowerSync aprobado, pendiente de integración | En camino | TAD-01 |
+| Backend/API | Esqueleto Fastify en preparación | En camino | — |
+| ORM | SQL directo en `db/migrations/` | Vigente | TAD-05 |
+| Identificadores | UUIDv4 con `crypto.randomUUID()` y `gen_random_uuid()` | Confirmado | — |
+| Cifrado local | Aprobado, pendiente de implementación | En camino | — |
+| Autenticación y sesiones | Aprobado, pendiente de implementación | En camino | — |
+| Validación de saldos | Solo se impide retirar más capital guardado del disponible; el saldo por cuenta no se valida | Vigente | PRD-04 / reglas de saldos |
 
 ## Decisiones de producto pendientes (PRD §14)
 
