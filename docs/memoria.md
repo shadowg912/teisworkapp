@@ -133,10 +133,26 @@ Registradas en `docs/decisions.md`:
 
 - `backend/` con Fastify, Zod, PostgreSQL (`pg`), CORS, cookies firmadas y Swagger.
 - Endpoints operativos: `GET /` y `GET /health`.
-- Middleware de autenticación con cookies (`authMiddleware`) y decorador `request.user`.
+- **Autenticación (TAD-07):**
+  - Tabla `users` (migración `002_users.sql`): `id`, `email`, `password_hash`, `created_at`.
+  - `POST /auth/register`: registra usuario con contraseña hasheada (bcrypt).
+  - `POST /auth/login`: valida credenciales, devuelve JWT en cuerpo y cookie `session_id`.
+  - `GET /auth/session`: devuelve el usuario autenticado desde JWT (header `Authorization: Bearer` o cookie).
+  - `POST /auth/logout`: borra la cookie de sesión.
+  - Hook global `onRequest` que extrae el JWT de `Authorization: Bearer` o cookie y decora `request.user`.
+- Usuario creado: `shadow` / `J3sk0921`.
 - Cliente de base de datos (`db/client.ts`) compatible con `DB_URL` o `DB_USER`/`DB_PASSWORD`.
 - Puerto configurable vía `PORT` (default 3333).
 - Scripts: `npm run backend:dev`, `npm run backend:start`, `npm run backend:typecheck`.
+
+### Frontend: autenticación y rutas protegidas
+
+- `src/services/auth/authService.ts`: login, registro, logout, sesión, estado de autenticación en memoria.
+- `src/modules/auth/LoginPage.tsx`: pantalla de login en `/auth` con credenciales precargadas (`shadow` / `J3sk0921`).
+- `src/shared/components/RequireAuth/RequireAuth.tsx`: protege rutas; redirige a `/auth` si no hay sesión.
+- `src/app/router/AppRoutes.tsx`: ruta `/auth` pública; el resto requiere autenticación.
+- `src/app/App.tsx`: verifica sesión al cargar antes de mostrar la UI.
+- `src/shared/components/AppShell/AppShell.tsx`: muestra usuario conectado y botón de cerrar sesión.
 
 ### Sincronización: PowerSync (offline-first)
 
@@ -144,7 +160,7 @@ Registradas en `docs/decisions.md`:
 - `powersync/README.md` — requisitos de despliegue (logical replication, JWT, Docker).
 - `src/services/sync/powersync.schema.ts` — schema del cliente para las 6 tablas (accounts, goals, goal_entries, financial_movements, products, stock_movements).
 - `src/services/sync/powersync.client.ts` — instancia de `PowerSyncDatabase` con SQLite local (WASM).
-- `src/services/sync/PowerSyncProvider.tsx` — proveedor de React que conecta/desconecta al servidor PowerSync.
+- `src/services/sync/PowerSyncProvider.tsx` — proveedor de React; el authenticator usa el JWT del almacén de auth del frontend.
 - `src/app/App.tsx` — la app está envuelta en `PowerSyncProvider`.
 - Variable de entorno: `VITE_POWERSYNC_URL` (default `http://localhost:8080`).
 - Mientras el servidor PowerSync no esté disponible, la app funciona con `localStorage` + `outbox` (modo local).
@@ -157,15 +173,14 @@ Registradas en `docs/decisions.md`:
 | TAD-03 | Identificadores | UUIDv4 |
 | TAD-04 | Framework del backend | Fastify |
 | TAD-06 | Cifrado y protección local | Cifrador local aprobado |
-| TAD-07 | Autenticación y sesiones | Autenticación de sesiones aprobada |
+| TAD-07 | Autenticación y sesiones | Autenticación de sesiones implementada |
 
 ### Pendiente
 
 ### Funcionalidad
 
-- Implementar validación real de credenciales y JWT en el backend (TAD-07).
-- Implementar cifrado local de la base de datos SQLite (TAD-06).
-- Rutas de API para finanzas, objetivo e inventario en el backend Fastify.
+- Implementar cifrado local del almacén (localStorage/outbox y SQLite de PowerSync) (TAD-06).
+- Rutas de API para finanzas, objetivo e inventario en el backend Fastify (protegidas con `requireAuth`).
 - Compras y ventas con sus artículos, inventario y finanzas en una transacción.
 - Lógica real de experimentos, proyectos y tareas.
 - Exportaciones, informes y respaldos.
