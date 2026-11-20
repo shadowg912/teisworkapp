@@ -177,10 +177,29 @@ Registradas en `docs/decisions.md`:
 
 ### Pendiente
 
-### Funcionalidad
+### Rutas de API implementadas (este incremento)
 
-- Cifrado local del almacén implementado (localStorage/outbox con AES-GCM + PBKDF2 derivado de la contraseña del usuario) (TAD-06).
-- Rutas de API para finanzas, objetivo e inventario en el backend Fastify (protegidas con `requireAuth`).
+Todas protegidas con `requireAuthHook` (JWT en `Authorization: Bearer` o cookie `session_id`):
+
+**Finanzas:**
+- `GET /finance/movements` — listar movimientos
+- `POST /finance/movements` — crear movimiento (7 tipos aprobados)
+
+**Objetivo de utilidad:**
+- `GET /goal` — obtener objetivo activo
+- `POST /goal` — crear objetivo
+- `PUT /goal/:id` — actualizar meta
+- `GET /goal/entries` — listar aportes y retiros
+- `POST /goal/entries` — crear aporte o retiro
+
+**Inventario:**
+- `GET /inventory/products` — listar productos
+- `POST /inventory/products` — crear producto
+- `GET /inventory/stock-movements` — listar movimientos de stock
+- `POST /inventory/stock-movements` — crear entrada/salida
+
+### Pendiente
+
 - Compras y ventas con sus artículos, inventario y finanzas en una transacción.
 - Lógica real de experimentos, proyectos y tareas.
 - Exportaciones, informes y respaldos.
