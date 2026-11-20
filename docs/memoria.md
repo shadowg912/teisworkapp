@@ -172,14 +172,14 @@ Registradas en `docs/decisions.md`:
 | TAD-01 | Motor de sincronización | PowerSync |
 | TAD-03 | Identificadores | UUIDv4 |
 | TAD-04 | Framework del backend | Fastify |
-| TAD-06 | Cifrado y protección local | Cifrador local aprobado |
+| TAD-06 | Cifrado y protección local | Cifrado local implementado (AES-GCM + PBKDF2) |
 | TAD-07 | Autenticación y sesiones | Autenticación de sesiones implementada |
 
 ### Pendiente
 
 ### Funcionalidad
 
-- Implementar cifrado local del almacén (localStorage/outbox y SQLite de PowerSync) (TAD-06).
+- Cifrado local del almacén implementado (localStorage/outbox con AES-GCM + PBKDF2 derivado de la contraseña del usuario) (TAD-06).
 - Rutas de API para finanzas, objetivo e inventario en el backend Fastify (protegidas con `requireAuth`).
 - Compras y ventas con sus artículos, inventario y finanzas en una transacción.
 - Lógica real de experimentos, proyectos y tareas.

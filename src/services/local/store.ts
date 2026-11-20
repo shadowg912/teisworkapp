@@ -18,6 +18,16 @@ import type {
 import { calculateStock } from '../../modules/inventory/model';
 import type { Goal, GoalEntry, GoalEntryType } from '../../modules/goal/model';
 import { calculateGoal } from '../../modules/goal/model';
+import {
+  clearDerivedKey,
+  decrypt,
+  deriveKey,
+  encrypt,
+  getDerivedKey,
+  loadSalt,
+  saveSalt,
+  setDerivedKey,
+} from '../../shared/utils/crypto';
 
 const STORAGE_KEY = 'teis.workapp.local.v1';
 
@@ -130,6 +140,11 @@ function isValidDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T12:00:00`));
 }
 
+/**
+ * Carga el estado inicial. Si hay datos cifrados en localStorage, los guarda
+ * internamente para poder descifrarlos cuando se proporcione una contraseña
+ * (método unlock). Si no hay datos cifrados, retorna estado vacío.
+ */
 function loadState(): LocalState {
   if (typeof window === 'undefined') {
     return emptyState();
@@ -141,36 +156,111 @@ function loadState(): LocalState {
       return emptyState();
     }
 
-    const parsed = JSON.parse(raw) as Partial<LocalState>;
-    if (parsed.version !== 1) {
-      return emptyState();
+    // El contenido puede ser un JSON plano (versiones previas al cifrado) o
+    // un string cifrado en base64. Intentamos parsear como JSON primero; si
+    // falla, lo tratamos como payload cifrado.
+    let parsed: Partial<LocalState> | null = null;
+    try {
+      parsed = JSON.parse(raw) as Partial<LocalState>;
+    } catch {
+      parsed = null;
     }
 
-    return {
-      version: 1,
-      movements: Array.isArray(parsed.movements) ? parsed.movements : [],
-      products: Array.isArray(parsed.products) ? parsed.products : [],
-      stockMovements: Array.isArray(parsed.stockMovements) ? parsed.stockMovements : [],
-      goal: parsed.goal ?? null,
-      goalEntries: Array.isArray(parsed.goalEntries) ? parsed.goalEntries : [],
-      outbox: Array.isArray(parsed.outbox) ? parsed.outbox : [],
-    };
+    if (parsed && parsed.version === 1) {
+      // Datos en texto plano (no cifrados). Los cargamos directamente.
+      return {
+        version: 1,
+        movements: Array.isArray(parsed.movements) ? parsed.movements : [],
+        products: Array.isArray(parsed.products) ? parsed.products : [],
+        stockMovements: Array.isArray(parsed.stockMovements)
+          ? parsed.stockMovements
+          : [],
+        goal: parsed.goal ?? null,
+        goalEntries: Array.isArray(parsed.goalEntries)
+          ? parsed.goalEntries
+          : [],
+        outbox: Array.isArray(parsed.outbox) ? parsed.outbox : [],
+      };
+    }
+
+    // Payload cifrado: lo guardamos para descifrar en unlock().
+    encryptedPayload = raw;
+    return emptyState();
   } catch {
     return emptyState();
   }
 }
 
 let state = loadState();
+let encryptedPayload: string | null = null;
 const listeners = new Set<() => void>();
+
+/**
+ * Descifra el payload almacenado y lo carga como estado actual. Requiere que
+ * el usuario haya proporcionado su contraseña previamente (derivarKey).
+ */
+async function loadEncryptedState(key: CryptoKey): Promise<void> {
+  if (!encryptedPayload) {
+    return;
+  }
+
+  try {
+    const decrypted = await decrypt(encryptedPayload, key);
+    const parsed = JSON.parse(decrypted) as Partial<LocalState>;
+
+    if (parsed.version !== 1) {
+      state = emptyState();
+      return;
+    }
+
+    state = {
+      version: 1,
+      movements: Array.isArray(parsed.movements) ? parsed.movements : [],
+      products: Array.isArray(parsed.products) ? parsed.products : [],
+      stockMovements: Array.isArray(parsed.stockMovements)
+        ? parsed.stockMovements
+        : [],
+      goal: parsed.goal ?? null,
+      goalEntries: Array.isArray(parsed.goalEntries)
+        ? parsed.goalEntries
+        : [],
+      outbox: Array.isArray(parsed.outbox) ? parsed.outbox : [],
+    };
+
+    encryptedPayload = null;
+  } catch {
+    // No se pudo descifrar: contraseña incorrecta o datos corruptos.
+    state = emptyState();
+    encryptedPayload = null;
+  }
+}
 
 function persist(next: LocalState): void {
   state = next;
 
+  const key = getDerivedKey();
+
   if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // La sesión sigue funcionando en memoria si el almacenamiento no está disponible.
+    const serialized = JSON.stringify(next);
+
+    if (key) {
+      // Cifrar antes de guardar (fire-and-forget, no bloquea la UI).
+      encrypt(serialized, key).then((encrypted) => {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, encrypted);
+        } catch {
+          /* ignorar errores de almacenamiento */
+        }
+      }).catch(() => {
+        /* ignorar errores de cifrado */
+      });
+    } else {
+      // Sin clave de cifrado: solo mantener en memoria, no persistir.
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignorar */
+      }
     }
   }
 
@@ -194,6 +284,80 @@ export function subscribe(listener: () => void): () => void {
 
 export function getSnapshot(): LocalState {
   return state;
+}
+
+export function isStoreUnlocked(): boolean {
+  return getDerivedKey() !== null;
+}
+
+/**
+ * Desbloquea el almacén local: deriva una clave de cifrado a partir de la
+ * contraseña y descifra los datos almacenados en localStorage.
+ */
+export async function unlockStore(password: string): Promise<void> {
+  const salt = loadSalt();
+  let key: CryptoKey;
+
+  if (!salt) {
+    // Primera vez: generar sal, guardarla y derivar la clave.
+    const explicitSalt = crypto.getRandomValues(new Uint8Array(16));
+    const saltBase64 = btoa(String.fromCharCode(...explicitSalt));
+    saveSalt(saltBase64);
+    key = await deriveKey(password, saltBase64);
+  } else {
+    key = await deriveKey(password, salt);
+  }
+
+  setDerivedKey(key);
+  await loadEncryptedState(key);
+
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+/**
+ * Bloquea el almacén local: cifra el estado actual, lo guarda en localStorage
+ * y limpia la clave de cifrado y la memoria.
+ */
+export async function lockStore(): Promise<void> {
+  const key = getDerivedKey();
+
+  if (typeof window !== 'undefined' && key) {
+    try {
+      const serialized = JSON.stringify(state);
+      const encrypted = await encrypt(serialized, key);
+      window.localStorage.setItem(STORAGE_KEY, encrypted);
+    } catch {
+      /* ignorar errores al bloquear */
+    }
+  }
+
+  clearDerivedKey();
+  encryptedPayload = null;
+  state = emptyState();
+
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+export function resetLocalState(): void {
+  clearDerivedKey();
+  encryptedPayload = null;
+  state = emptyState();
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* ignorar */
+    }
+  }
+
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
 function activeGoal(): Goal | null {
@@ -503,7 +667,9 @@ export function createProduct(input: NewProductInput): StoreResult {
     return { ok: false, error: 'El SKU es obligatorio.' };
   }
 
-  if (state.products.some((product) => product.sku.toLowerCase() === sku.toLowerCase())) {
+  if (
+    state.products.some((product) => product.sku.toLowerCase() === sku.toLowerCase())
+  ) {
     return { ok: false, error: 'Ya existe un producto con ese SKU.' };
   }
 
@@ -596,8 +762,4 @@ export function createStockMovement(input: NewStockMovementInput): StoreResult {
   });
 
   return { ok: true };
-}
-
-export function resetLocalState(): void {
-  persist(emptyState());
 }

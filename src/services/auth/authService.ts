@@ -13,6 +13,8 @@ let user: { id: string; email: string } | null = null;
 
 const listeners = new Set<() => void>();
 
+import { lockStore, unlockStore } from '../local/store';
+
 function notify() {
   for (const listener of listeners) {
     listener();
@@ -80,6 +82,15 @@ export async function login(
 
   token = data.token;
   user = { id: data.id, email: data.email };
+
+  // Desbloquear el almacén local cifrado con la contraseña del usuario.
+  try {
+    await unlockStore(password);
+  } catch {
+    // Si falla el descifrado (contraseña incorrecta o datos corruptos),
+    // el almacén queda vacío. La sesión de autenticación sigue activa.
+  }
+
   notify();
 
   return { id: data.id, email: data.email, token: data.token };
@@ -107,6 +118,13 @@ export async function logout(): Promise<void> {
     await request('/auth/logout', { method: 'POST' });
   } catch {
     // Ignorar errores del servidor al cerrar sesión
+  }
+
+  // Cifrar y bloquear el almacén local antes de cerrar la sesión.
+  try {
+    await lockStore();
+  } catch {
+    // Si falla el cifrado, al menos limpiamos la sesión.
   }
 
   token = null;

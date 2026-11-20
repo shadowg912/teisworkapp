@@ -63,9 +63,8 @@ Estas decisiones se registraron a partir de las respuestas del responsable al cu
 | Backend/API | Esqueleto Fastify en preparación | En camino | — |
 | ORM | SQL directo en `db/migrations/` | Vigente | TAD-05 |
 | Identificadores | UUIDv4 con `crypto.randomUUID()` y `gen_random_uuid()` | Confirmado | — |
-| Cifrado local | Aprobado, pendiente de implementación | En camino | — |
+| Cifrado local de almacén | AES-GCM + PBKDF2 derivado de la contraseña del usuario, localStorage cifrado | Implementado | — |
 | Autenticación y sesiones | Backend Fastify con bcrypt + JWT, rutas /auth/*, pantalla de login en frontend | Implementado | — |
-| Cifrado local de almacén | Pendiente (TAD-06) | Pendiente | — |
 | Validación de saldos | Solo se impide retirar más capital guardado del disponible; el saldo por cuenta no se valida | Vigente | PRD-04 / reglas de saldos |
 
 ## Decisiones de producto pendientes (PRD §14)
