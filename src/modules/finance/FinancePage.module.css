@@ -1,0 +1,66 @@
+.summary {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.filters {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.filter {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+
+.filter:hover {
+  background: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+}
+
+.filterActive {
+  background: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+  font-weight: 550;
+}
+
+.movement {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.movementName {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.movementCategory {
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+}
+
+.empty {
+  padding: var(--space-6);
+}
+
+@media (max-width: 767px) {
+  .toolbar {
+    justify-content: flex-start;
+  }
+}

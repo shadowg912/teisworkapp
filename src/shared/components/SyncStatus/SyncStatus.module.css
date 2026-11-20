@@ -1,0 +1,23 @@
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.ok {
+  background: var(--color-success);
+}
+
+.pending {
+  background: var(--color-warning);
+}
