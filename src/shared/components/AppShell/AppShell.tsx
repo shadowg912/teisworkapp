@@ -1,17 +1,34 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { IonIcon } from '@ionic/react';
-import { closeOutline, menuOutline } from 'ionicons/icons';
+import { closeOutline, logInOutline, logOutOutline, menuOutline } from 'ionicons/icons';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 
 import { navigationItems } from '../../../app/config/navigation';
 import { SyncStatus } from '../SyncStatus/SyncStatus';
 import { ThemeToggle } from '../ThemeToggle/ThemeToggle';
+import {
+  clearSession,
+  getUser,
+  isAuthenticated,
+  subscribe as subscribeAuth,
+} from '../../../services/auth/authService';
 import styles from './AppShell.module.css';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState(getUser());
   const location = useLocation();
+
+  useEffect(() => {
+    setUser(getUser());
+
+    const unsubscribe = subscribeAuth(() => {
+      setUser(getUser());
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -31,6 +48,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [menuOpen]);
+
+  const handleLogout = () => {
+    clearSession();
+    setUser(null);
+    setMenuOpen(false);
+  };
 
   return (
     <div className={styles.shell}>
@@ -77,6 +100,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className={styles.footer}>
           <SyncStatus />
+          {isAuthenticated() && user ? (
+            <div className={styles.userInfo}>
+              <span className={styles.userEmail}>{user.email}</span>
+              <button
+                type="button"
+                className={styles.logoutButton}
+                onClick={handleLogout}
+                aria-label="Cerrar sesión"
+              >
+                <IonIcon icon={logOutOutline} aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <Link to="/auth" className={styles.loginLink}>
+              <IonIcon icon={logInOutline} aria-hidden="true" />
+              <span>Iniciar sesión</span>
+            </Link>
+          )}
           <ThemeToggle />
         </div>
       </aside>

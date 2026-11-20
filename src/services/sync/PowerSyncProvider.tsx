@@ -13,6 +13,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Authenticator, DownloadOptions } from '@powersync/common';
 
 import { db, POWERSYNC_URL } from './powersync.client';
+import { getToken } from '../../services/auth/authService';
 
 type SyncStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -30,16 +31,19 @@ const PowerSyncContext = createContext<PowerSyncContextValue | null>(null);
 /**
  * Autenticador de PowerSync.
  *
- * Obtiene un JWT de autenticación del backend Fastify (TAD-07). Mientras el
- * backend no implemente endpoints de autenticación, devuelve null y PowerSync
- * funciona en modo solo-lectura local.
+ * Obtiene el JWT del almacén de autenticación del frontend (que a su vez lo
+ * obtiene del backend Fastify tras el login del usuario). Mientras no haya
+ * sesión activa, PowerSync funciona en modo solo-lectura local.
  */
 const authenticator: Authenticator = {
-  resolveCredentials: async (_options): Promise<string> => {
-    // TODO: llamar al backend Fastify para obtener un JWT de sesión.
-    // El backend debe exponer un endpoint como POST /auth/session que devuelva
-    // un token válido para PowerSync.
-    throw new Error('Autenticación de backend no implementada aún (TAD-07).');
+  resolveCredentials: async (): Promise<string> => {
+    const token = getToken();
+
+    if (!token) {
+      throw new Error('No hay sesión activa para sincronizar con PowerSync.');
+    }
+
+    return token;
   },
 };
 

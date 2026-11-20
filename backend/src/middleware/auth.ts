@@ -1,30 +1,65 @@
-import type { FastifyPluginAsync } from 'fastify';
-import cookie from '@fastify/cookie';
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+  authenticated: true;
+};
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    user: AuthenticatedUser | null;
+  }
+}
 
 /**
- * Middleware de autenticación y sesiones.
- *
- * Configura cookies firmadas y un decorador `request.user` para identificar
- * al usuario autenticado. La validación real de credenciales y el cifrado
- * local se implementan en una siguiente etapa (TAD-06, TAD-07).
+ * Extrae el JWT de la cabecera Authorization: Bearer <token>
+ * o de la cookie session_id.
  */
-export const authMiddleware: FastifyPluginAsync = async (fastify) => {
-  await fastify.register(cookie, {
-    secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-    parseOptions: {},
-  });
+function extractToken(headers: Record<string, string | undefined>): string | null {
+  const auth = headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    return auth.slice(7);
+  }
 
-  fastify.decorateRequest('user', null);
+  const cookie = headers.cookie ?? '';
+  const match = cookie.match(/(?:^|;\s*)session_id=([^;]+)/);
+  return match ? match[1] : null;
+}
 
-  fastify.addHook('onRequest', async (request) => {
-    const sessionId = request.cookies?.session_id;
+export function attachAuthHook(
+  app: { addHook: (name: 'onRequest', fn: (request: { headers: Record<string, string | undefined>; user?: AuthenticatedUser | null }) => Promise<void> | void) => void },
+  jwtSecret: string
+): void {
+  const jwt = require('jsonwebtoken');
 
-    if (!sessionId) {
+  app.addHook('onRequest', async (request) => {
+    const token = extractToken(request.headers);
+
+    if (!token) {
+      request.user = null;
       return;
     }
 
-    // TODO: validar sesión contra la base de datos / almacenamiento local
-    (request as { user?: { sessionId: string; authenticated: boolean } }).user =
-      { sessionId, authenticated: false };
+    try {
+      const decoded = jwt.verify(token, jwtSecret) as {
+        sub: string;
+        email: string;
+      };
+
+      request.user = { id: decoded.sub, email: decoded.email, authenticated: true };
+    } catch {
+      request.user = null;
+    }
   });
-};
+}
+
+export function requireAuth(
+  request: { user: AuthenticatedUser | null },
+  reply: { status: (code: number) => { send: (body: unknown) => unknown } }
+): AuthenticatedUser | null {
+  if (!request.user || !request.user.authenticated) {
+    reply.status(401).send({ error: 'Autenticación requerida.' });
+    return null;
+  }
+
+  return request.user;
+}

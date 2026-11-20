@@ -2,8 +2,36 @@ import fastify from 'fastify';
 import { fastifyCors } from '@fastify/cors';
 import { fastifySwagger } from '@fastify/swagger';
 import { fastifySwaggerUi } from '@fastify/swagger-ui';
-import { authMiddleware } from './middleware/auth';
+import jwt from 'jsonwebtoken';
 import { healthRoutes } from './routes/health';
+import { authRoutes } from './routes/auth';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+  authenticated: true;
+};
+
+declare module 'fastify' {
+  interface FastifyRequest {
+    user: AuthenticatedUser | null;
+  }
+}
+
+function extractToken(headers: Record<string, string | string[] | undefined>): string | null {
+  const auth = headers.authorization;
+  const authStr = Array.isArray(auth) ? auth[0] : auth;
+  if (authStr && authStr.startsWith('Bearer ')) {
+    return authStr.slice(7);
+  }
+
+  const cookie = headers.cookie;
+  const cookieStr = Array.isArray(cookie) ? cookie[0] : cookie;
+  const match = cookieStr?.match(/(?:^|;\s*)session_id=([^;]+)/);
+  return match ? match[1] : null;
+}
 
 export async function buildApp() {
   const app = fastify({
@@ -20,7 +48,7 @@ export async function buildApp() {
     openapi: {
       info: {
         title: 'TEIS workapp API',
-        description: 'API del backend de TEIS workapp (finanzas, inventario, objetivo)',
+        description: 'API del backend de TEIS workapp (finanzas, inventario, objetivo, autenticación)',
         version: '0.1.0',
       },
       servers: [
@@ -36,9 +64,29 @@ export async function buildApp() {
     routePrefix: '/docs',
   });
 
-  await app.register(authMiddleware);
+  // Hook global de autenticación: lee el JWT de Authorization: Bearer o cookie session_id
+  app.addHook('onRequest', async (request) => {
+    const token = extractToken(request.headers);
+
+    if (!token) {
+      request.user = null;
+      return;
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as {
+        sub: string;
+        email: string;
+      };
+
+      request.user = { id: decoded.sub, email: decoded.email, authenticated: true };
+    } catch {
+      request.user = null;
+    }
+  });
 
   await app.register(healthRoutes);
+  await app.register(authRoutes);
 
   // Ruta raíz de información
   app.get('/', async () => {
@@ -47,6 +95,7 @@ export async function buildApp() {
       version: '0.1.0',
       docs: '/docs',
       health: '/health',
+      auth: ['/auth/register', '/auth/login', '/auth/session', '/auth/logout'],
     };
   });
 
