@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TEIS workapp</string>
+    <string name="title_activity_main">TEIS workapp</string>
+    <string name="package_name">com.teis.workapp</string>
+    <string name="custom_url_scheme">com.teis.workapp</string>
+</resources>
