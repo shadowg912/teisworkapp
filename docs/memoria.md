@@ -127,7 +127,9 @@ Registradas en `docs/decisions.md`:
 - Los IDs son UUIDv4 (TAD-03 pendiente).
 - La validación de saldo por cuenta y la idempotencia del servidor siguen pendientes.
 
-## Backend (nuevo)
+## Backend y sincronización (este incremento)
+
+### Backend: Fastify
 
 - `backend/` con Fastify, Zod, PostgreSQL (`pg`), CORS, cookies firmadas y Swagger.
 - Endpoints operativos: `GET /` y `GET /health`.
@@ -135,6 +137,17 @@ Registradas en `docs/decisions.md`:
 - Cliente de base de datos (`db/client.ts`) compatible con `DB_URL` o `DB_USER`/`DB_PASSWORD`.
 - Puerto configurable vía `PORT` (default 3333).
 - Scripts: `npm run backend:dev`, `npm run backend:start`, `npm run backend:typecheck`.
+
+### Sincronización: PowerSync (offline-first)
+
+- `powersync/sync-config.yaml` — configuración del servidor PowerSync (reglas de sync por tabla).
+- `powersync/README.md` — requisitos de despliegue (logical replication, JWT, Docker).
+- `src/services/sync/powersync.schema.ts` — schema del cliente para las 6 tablas (accounts, goals, goal_entries, financial_movements, products, stock_movements).
+- `src/services/sync/powersync.client.ts` — instancia de `PowerSyncDatabase` con SQLite local (WASM).
+- `src/services/sync/PowerSyncProvider.tsx` — proveedor de React que conecta/desconecta al servidor PowerSync.
+- `src/app/App.tsx` — la app está envuelta en `PowerSyncProvider`.
+- Variable de entorno: `VITE_POWERSYNC_URL` (default `http://localhost:8080`).
+- Mientras el servidor PowerSync no esté disponible, la app funciona con `localStorage` + `outbox` (modo local).
 
 ### Decisiones técnicas confirmadas (este incremento)
 
@@ -150,10 +163,9 @@ Registradas en `docs/decisions.md`:
 
 ### Funcionalidad
 
-- Integrar PowerSync para sincronizar el `outbox` local con PostgreSQL (TAD-01).
-- Implementar validación real de credenciales y cifrado local (TAD-06, TAD-07).
-- Validación de saldos por cuenta y reglas de capital guardado aprobadas.
-- Rutas de API para finanzas, objetivo e inventario.
+- Implementar validación real de credenciales y JWT en el backend (TAD-07).
+- Implementar cifrado local de la base de datos SQLite (TAD-06).
+- Rutas de API para finanzas, objetivo e inventario en el backend Fastify.
 - Compras y ventas con sus artículos, inventario y finanzas en una transacción.
 - Lógica real de experimentos, proyectos y tareas.
 - Exportaciones, informes y respaldos.
@@ -189,7 +201,7 @@ No convertir propuestas en decisiones aprobadas sin confirmación del responsabl
 - El incremento actual (formularios, almacén local y migraciones) está **sin commit**.
 - `.env` contiene credenciales reales y está ignorado por Git. Nunca versionarlo.
 - `dist/` y los assets copiados de Android están ignorados.
-- Dependencias nuevas: `pg` y `@types/pg`.
+- Dependencias nuevas: `pg`, `@types/pg`, `@powersync/web`.
 
 ## Cómo retomar
 

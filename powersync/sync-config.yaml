@@ -1,0 +1,64 @@
+# PowerSync server configuration for TEIS workapp.
+#
+# Este archivo se despliega en el servidor PowerSync y define qué tablas y
+# filas se sincronizan con cada cliente. Requiere PostgreSQL con logical
+# replication habilitado (wal_level = logical).
+
+version: 1
+
+database:
+  # Conexión a PostgreSQL central de TEIS workapp.
+  url: ${DB_URL}
+
+tables:
+  accounts:
+    # Cuentas fijas: se sincronizan todas con todos los clientes.
+    sync_rules:
+      - id: all_accounts
+        filter: "true"
+
+  goals:
+    # Un solo objetivo activo por usuario/cliente.
+    sync_rules:
+      - id: user_goals
+        filter: "true"
+
+  goal_entries:
+    # Entradas del objetivo vinculadas al objetivo del cliente.
+    sync_rules:
+      - id: user_goal_entries
+        filter: "true"
+
+  financial_movements:
+    # Movimientos financieros del cliente.
+    sync_rules:
+      - id: user_financial_movements
+        filter: "true"
+
+  products:
+    # Catálogo de productos: se sincroniza todo el catálogo.
+    sync_rules:
+      - id: all_products
+        filter: "true"
+
+  stock_movements:
+    # Movimientos de inventario del cliente.
+    sync_rules:
+      - id: user_stock_movements
+        filter: "true"
+
+  # Tabla de metadatos de sincronización (gestionada por PowerSync).
+  schema_migrations:
+    sync_rules:
+      - id: no_sync
+        filter: "false"
+
+auth:
+  # PowerSync valida JWT para determinar qué filas sincronizar.
+  # El JWT debe emitirse por el backend Fastify (TAD-07).
+  jwt:
+    issuer: ${AUTH_ISSUER:-teis-workapp}
+    audience: ${AUTH_AUDIENCE:-teis-workapp}
+
+logging:
+  level: info
