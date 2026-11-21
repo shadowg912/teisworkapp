@@ -43,3 +43,5 @@ Thumbs.db
 # Pruebas y cobertura
 coverage/
 .nyc_output/
+
+DEPLOY.md

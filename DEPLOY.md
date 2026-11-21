@@ -428,3 +428,4 @@ docker run -d --name powersync -p 8080:8080 \
 | CORS error en el móvil | Asegúrate de que `CORS_ORIGIN` en `backend/.env` incluya el dominio de la app/web. |
 | PowerSync no sincroniza | Verifica que `wal_level = logical` esté activo en PostgreSQL y que el servidor PowerSync tenga acceso a la base de datos. |
 | Android no conecta | En emulador usa `10.0.2.2:3333`; en dispositivo físico usa la IP pública del servidor. Verifica que el puerto 3333 esté accesible (firewall). |
+ci
